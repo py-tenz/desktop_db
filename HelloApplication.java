@@ -29,6 +29,10 @@ import java.sql.*;
 
 import javafx.concurrent.*;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 public class HelloApplication extends Application {
     public static Connection conn;
     protected static String WAY = "jdbc:mysql://localhost:3306/test";
@@ -164,8 +168,8 @@ public class HelloApplication extends Application {
                         protected Void call() throws Exception {
                             String sqlQuery = "CREATE TABLE `" + tableName + "` (" +
                                     "ID INT PRIMARY KEY," +
-                                    "STRING_LIST VARCHAR(50)," +
-                                    "INTEGER_LIST VARCHAR(1001))";
+                                    "STRING_LIST TEXT," +
+                                    "INTEGER_LIST TEXT)";
 
                             try (Statement stmt = conn.createStatement()) {
                                 stmt.executeUpdate(sqlQuery);
@@ -203,10 +207,86 @@ public class HelloApplication extends Application {
     }
 
 
-    static class HandleEnterList implements EventHandler<ActionEvent> {
+    class HandleEnterList implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent event) {
+            Label tableLabel = new Label("Введите название таблицы: ");
+            TextField tableField = new TextField();
+            TextField stringsField = new TextField();
 
+            Label stringsLabel = new Label("Введите 10 строк: ");
+
+            VBox inputFieldsBox= new VBox(5);
+            List<TextField> stringFields = new ArrayList<>();
+            for (int i = 0; i < 10; i++) {
+                TextField tf = new TextField();
+                tf.setPromptText("Строка " + (i + 1));
+                stringFields.add(tf);
+                inputFieldsBox.getChildren().add(tf);
+            }
+
+            Label errorLabel = new Label();
+            errorLabel.setStyle("-fx-text-fill: red;");
+
+            Button btnSave = new Button("Cохранить");
+
+            VBox vbox = new VBox(10);
+            vbox.setAlignment(Pos.CENTER);
+            vbox.getChildren().addAll(tableLabel, tableField, stringsLabel, inputFieldsBox, errorLabel, btnSave);
+
+            Scene scene = new Scene(vbox, 400, 500);
+            stage.setScene(scene);
+
+            btnSave.setOnAction(e -> {
+                String tableName = tableField.getText().trim();
+                String[] strings = stringsField.getText().trim().split(",");
+
+                if (tableName.isEmpty()) {
+                    errorLabel.setText("Имя таблицы не может быть пустым!");
+                    return;
+                }
+
+                List<String> inputList = new ArrayList<>();
+                for (TextField tf : stringFields) {
+                    inputList.add(tf.getText().trim());
+                };
+
+                boolean allFilled = inputList.stream().allMatch(s -> !s.isEmpty());
+                if (!allFilled) {
+                    errorLabel.setText("Пожалуйста, заполните все 10 строк!");
+                    return;
+                };
+
+                errorLabel.setText("");
+
+                Listik listik = new Listik();
+                List<Integer> randomList = listik.random();
+
+                Task<Void> saveTask = new Task<Void>() {
+                    @Override
+                    protected Void call() throws Exception {
+                        String sqlInsert = "INSERT INTO `" + tableName + "` (ID, STRING_LIST, INTEGER_LIST) VALUES (?,?,?)";
+                        try (PreparedStatement ps = conn.prepareStatement(sqlInsert)) {
+                            ps.setInt(1, (int) (Math.random() * 10000));
+                            ps.setString(2, String.join(",", inputList));
+                            ps.setString(3, randomList.toString());
+                            ps.executeUpdate();
+
+                            Platform.runLater(() -> {
+                                showMessage("Данные успешно сохранены в таблицу " + tableName);
+                            });
+                        } catch (SQLException e) {
+                            Platform.runLater(() -> {
+                                showMessage("Ошибка при сохрании данных: " + e.getMessage());
+                            });
+                        }
+                        return null;
+                    }
+                };
+                Thread saveThread = new Thread(saveTask);
+                saveThread.setDaemon(true);
+                saveThread.start();
+            });
         }
     }
 
@@ -240,11 +320,43 @@ public class HelloApplication extends Application {
                 Text txt = new Text("Введите ID для удаления:");
                 TextField idField = new TextField();
                 Button deleteButton = new Button("Удалить");
+                Label availableIdsLabel = new Label("Загрузка доступных ID...");
 
-                VBox vbox2 = new VBox(10, txt, idField, deleteButton);
+                VBox vbox2 = new VBox(10, availableIdsLabel, txt, idField, deleteButton);
                 vbox2.setAlignment(Pos.CENTER);
                 Scene scene2 = new Scene(vbox2, 400, 300);
                 stage.setScene(scene2);
+
+                Task<Void> listIdsTask = new Task<Void>() {
+                    @Override
+                    protected Void call() throws Exception {
+                        String sql = "SELECT ID FROM `" + tableName + "`";
+                        try (Statement stmt = conn.createStatement();
+                             ResultSet rs = stmt.executeQuery(sql)) {
+
+                            StringBuilder ids = new StringBuilder("Доступные ID:\n");
+                            while (rs.next()) {
+                                ids.append(rs.getInt("ID")).append("\n");
+                            }
+
+                            Platform.runLater(() -> {
+                                if (ids.length() > 15) {
+                                    availableIdsLabel.setText(ids.toString());
+                                } else {
+                                    showMessage(ids.length() > 15 ? ids.toString() : "Нет доступных ID для удаления.");
+                                }
+                            });
+
+                        } catch (SQLException e) {
+                            Platform.runLater(() -> showMessage("Ошибка при получении ID: " + e.getMessage()));
+                        }
+                        return null;
+                    }
+                };
+
+                Thread listThread = new Thread(listIdsTask);
+                listThread.setDaemon(true);
+                listThread.start();
 
                 deleteButton.setOnAction(event2 -> {
                     String idStr = idField.getText().trim();
