@@ -1,6 +1,7 @@
-package org.example.demo1;
+package org.example.demo2;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
@@ -17,16 +18,22 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.ss.usermodel.*;
+import java.sql.*;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.sql.*;
 
+import javafx.concurrent.*;
+
 public class HelloApplication extends Application {
     public static Connection conn;
     protected static String WAY = "jdbc:mysql://localhost:3306/test";
     public static String NAME = "root";
-    public static String PASS = "Rodef2007";
+    public static String PASS = "root";
     public static Stage stage;
     public static Scene mainScene;
     static {
@@ -79,36 +86,51 @@ public class HelloApplication extends Application {
         stage.setScene(mainScene);
         stage.show();
     }
+
     class HandleShowTables implements EventHandler<ActionEvent> {
         @Override
         public void handle(ActionEvent event) {
-            String sqlQuery = "SHOW TABLES";
-            try {
-                PreparedStatement ps = conn.prepareStatement(sqlQuery);
-                ResultSet rs = ps.executeQuery();
+            Task<Void> showTask = new Task<Void>() {
+                @Override
+                        protected Void call() throws Exception {
+                        String sqlQuery = "SHOW TABLES";
+                        try {
+                            PreparedStatement ps = conn.prepareStatement(sqlQuery);
+                            ResultSet rs = ps.executeQuery();
 
-                VBox vbox = new VBox(10);
-                vbox.setAlignment(Pos.CENTER);
-                while (rs.next()) {
-                    String tableName = rs.getString(1);
-                    Text text = new Text(tableName);
-                    vbox.getChildren().add(text);
+                            VBox vbox = new VBox(10);
+                            vbox.setAlignment(Pos.CENTER);
+                            while (rs.next()) {
+                                String tableName = rs.getString(1);
+                                Text text = new Text(tableName);
+                                vbox.getChildren().add(text);
+                            }
+                            Button back = new Button("<-Назад");
+                            back.setOnAction(event1 -> {
+                                stage.setScene(mainScene);
+                            });
+                            vbox.getChildren().add(back);
+
+                            ScrollPane scrollPane = new ScrollPane(vbox);
+                            scrollPane.setFitToWidth(true);
+                            scrollPane.setPrefHeight(300);
+
+                            Platform.runLater(() -> {
+                                Scene scene = new Scene(scrollPane, 400, 300);
+                                stage.setScene(scene);
+                            });
+                        } catch (SQLException e) {
+                            Platform.runLater(()-> {
+                                System.out.println("Ошибка при выводе таблиц: " + e.getMessage());
+                                });
+                        }
+                    return null;
                 }
-                Button back = new Button("<-Назад");
-                back.setOnAction(event1 -> {
-                    stage.setScene(mainScene);
-                });
-                vbox.getChildren().add(back);
+            };
 
-                ScrollPane scrollPane = new ScrollPane(vbox);
-                scrollPane.setFitToWidth(true);
-                scrollPane.setPrefHeight(300);
-
-                Scene scene = new Scene(scrollPane, 400, 300);
-                stage.setScene(scene);
-            } catch (SQLException e) {
-                System.out.println("Ошибка при выводе таблиц: " + e.getMessage());
-            }
+            Thread showThread = new Thread(showTask);
+            showThread.setDaemon(true);
+            showThread.start();
         }
     }
 
@@ -137,17 +159,31 @@ public class HelloApplication extends Application {
                     return;
                 }
 
-                String sqlQuery = "CREATE TABLE `" + tableName + "` (" +
-                        "ID INT PRIMARY KEY," +
-                        "STRING_LIST VARCHAR(50)," +
-                        "INTEGER_LIST VARCHAR(1001))";
+                Task<Void> CreateTask = new Task<Void>() {
+                @Override
+                        protected Void call() throws Exception {
+                            String sqlQuery = "CREATE TABLE `" + tableName + "` (" +
+                                    "ID INT PRIMARY KEY," +
+                                    "STRING_LIST VARCHAR(50)," +
+                                    "INTEGER_LIST VARCHAR(1001))";
 
-                try (Statement stmt = conn.createStatement()) {
-                    stmt.executeUpdate(sqlQuery);
-                    showMessage("Таблица " + tableName + " успешно создана!");
-                } catch (SQLException e) {
-                    showMessage("Ошибка при создании таблицы: " + e.getMessage());
-                }
+                            try (Statement stmt = conn.createStatement()) {
+                                stmt.executeUpdate(sqlQuery);
+                                Platform.runLater(() -> {
+                                    showMessage("Таблица " + tableName + " успешно создана!");
+                                });
+                            } catch (SQLException e) {
+                                Platform.runLater(() -> {
+                                    showMessage("Ошибка при создании таблицы: " + e.getMessage());
+                                });
+                        }
+                    return null;
+                    }
+                };
+
+                Thread createThread = new Thread(CreateTask);
+                createThread.setDaemon(true);
+                createThread.start();
             });
         }
 
@@ -195,12 +231,11 @@ public class HelloApplication extends Application {
                     return;
                 }
 
-                
+
                 if (!tableName.matches("^[a-zA-Z_][a-zA-Z0-9_]*$")) {
                     showMessage("Имя таблицы должно начинаться с буквы или подчёркивания и содержать только буквы, цифры, подчёркивания.");
                     return;
                 }
-
 
                 Text txt = new Text("Введите ID для удаления:");
                 TextField idField = new TextField();
@@ -226,19 +261,35 @@ public class HelloApplication extends Application {
 
                     int readyId = Integer.parseInt(idStr);
 
-                    String sqlQuery = "DELETE FROM `" + tableName + "` WHERE ID=?";
-                    try (PreparedStatement pstmt = conn.prepareStatement(sqlQuery)) {
-                        pstmt.setInt(1, readyId);
-                        int rows = pstmt.executeUpdate();
+                    Task<Void> deleteTask = new Task<Void>() {
+                        @Override
+                        protected Void call() throws Exception {
+                            String sqlQuery = "DELETE FROM `" + tableName + "` WHERE ID=?";
+                            try (PreparedStatement pstmt = conn.prepareStatement(sqlQuery)) {
+                                pstmt.setInt(1, readyId);
+                                int rows = pstmt.executeUpdate();
 
-                        if (rows > 0) {
-                            showMessage("Объект с ID " + readyId + " успешно удалён.");
-                        } else {
-                            showMessage("Объект с ID " + readyId + " не найден.");
+                                if (rows > 0) {
+                                    Platform.runLater(() -> {
+                                        showMessage("Объект с ID " + readyId + " успешно удалён.");
+                                    });
+                                } else {
+                                    Platform.runLater(() -> {
+                                        showMessage("Объект с ID " + readyId + " не найден.");
+                                    });
+                                }
+                            } catch (SQLException e) {
+                                Platform.runLater(() -> {
+                                    showMessage("Ошибка при удалении: " + e.getMessage());
+                                });
+                            }
+                            return null;
                         }
-                    } catch (SQLException e) {
-                        showMessage("Ошибка при удалении: " + e.getMessage());
-                    }
+                    };
+
+                    Thread deleteThread = new Thread(deleteTask);
+                    deleteThread.setDaemon(true);
+                    deleteThread.start();
                 });
             });
         }
@@ -274,45 +325,56 @@ public class HelloApplication extends Application {
                     return;
                 }
 
-                String sqlQuery = "SELECT * FROM `" + tableName + "`";
-                try (PreparedStatement stmt = conn.prepareStatement(sqlQuery);
-                     ResultSet rs = stmt.executeQuery()) {
+                Task<Void> exportTask = new Task<Void>() {
+                    @Override
+                    protected Void call() {
+                        String sqlQuery = "SELECT * FROM `" + tableName + "`";
+                        try (PreparedStatement stmt = conn.prepareStatement(sqlQuery);
+                             ResultSet rs = stmt.executeQuery()) {
 
-                    XSSFWorkbook workbook = new XSSFWorkbook();
-                    XSSFSheet sheet = workbook.createSheet("Export");
+                            XSSFWorkbook workbook = new XSSFWorkbook();
+                            XSSFSheet sheet = workbook.createSheet("Export");
 
-                    ResultSetMetaData metaData = rs.getMetaData();
-                    int columnCount = metaData.getColumnCount();
+                            ResultSetMetaData metaData = rs.getMetaData();
+                            int columnCount = metaData.getColumnCount();
 
-                    // Заголовки
-                    Row header = sheet.createRow(0);
-                    for (int i = 1; i <= columnCount; i++) {
-                        Cell cell = header.createCell(i - 1);
-                        cell.setCellValue(metaData.getColumnName(i));
-                    }
+                            // Записываем заголовки столбцов
+                            Row header = sheet.createRow(0);
+                            for (int i = 1; i <= columnCount; i++) {
+                                Cell cell = header.createCell(i - 1);
+                                cell.setCellValue(metaData.getColumnName(i));
+                            }
 
-                    int rowIndex = 1;
-                    while (rs.next()) {
-                        Row row = sheet.createRow(rowIndex++);
-                        for (int i = 1; i <= columnCount; i++) {
-                            row.createCell(i - 1).setCellValue(rs.getString(i));
+                            int rowIndex = 1;
+                            while (rs.next()) {
+                                Row row = sheet.createRow(rowIndex++);
+                                for (int i = 1; i <= columnCount; i++) {
+                                    row.createCell(i - 1).setCellValue(rs.getString(i));
+                                }
+                            }
+
+                            // Сохраняем рабочую книгу в файл
+                            String filePath = tableName + "_export.xlsx";
+                            try (FileOutputStream fileOut = new FileOutputStream(filePath)) {
+                                workbook.write(fileOut);
+                            }
+                            workbook.close();
+
+                            Platform.runLater(() -> {
+                                showMessage("Экспорт завершён. Файл сохранён как:\n" + filePath);
+                            });
+                        } catch (SQLException ex) {
+                            Platform.runLater(() -> showMessage("Ошибка SQL: " + ex.getMessage()));
+                        } catch (IOException ex) {
+                            Platform.runLater(() -> showMessage("Ошибка записи в файл: " + ex.getMessage()));
                         }
+                        return null;
                     }
+                };
 
-                    // Сохранение в файл
-                    String filePath = tableName + "_export.xlsx";
-                    try (FileOutputStream fileOut = new FileOutputStream(filePath)) {
-                        workbook.write(fileOut);
-                        workbook.close();
-                    }
-
-                    showMessage("Экспорт завершён. Файл сохранён как:\n" + filePath);
-
-                } catch (SQLException ex) {
-                    showMessage("Ошибка SQL: " + ex.getMessage());
-                } catch (IOException ex) {
-                    showMessage("Ошибка записи в файл: " + ex.getMessage());
-                }
+                Thread exportThread = new Thread(exportTask);
+                exportThread.setDaemon(true);
+                exportThread.start();
             });
         }
     }
@@ -321,4 +383,3 @@ public class HelloApplication extends Application {
         launch();
     }
 }
-
