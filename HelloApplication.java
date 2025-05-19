@@ -158,7 +158,7 @@ public class HelloApplication extends Application {
                     showMessage("Имя таблицы не может быть пустым.");
                     return;
                 }
-                if (!tableName.matches("^[a-zA-Z_][a-zA-Z0-9_]*$")) {
+                if (!tableName.matches("^`?[a-zA-Z_][a-zA-Z0-9_]*`?$")) {
                     showMessage("Имя таблицы должно начинаться с буквы/подчёркивания и содержать только латинские буквы, цифры и подчёркивания.");
                     return;
                 }
@@ -312,7 +312,7 @@ public class HelloApplication extends Application {
                 }
 
 
-                if (!tableName.matches("^[a-zA-Z_][a-zA-Z0-9_]*$")) {
+                if (!tableName.matches("^`?[a-zA-Z_][a-zA-Z0-9_]*`?$")) {
                     showMessage("Имя таблицы должно начинаться с буквы или подчёркивания и содержать только буквы, цифры, подчёркивания.");
                     return;
                 }
