@@ -1,0 +1,140 @@
+/* Глобальные стили и фон */
+.root, .scroll-pane, .border-pane, .vbox, .hbox {
+    -fx-background-color: #fafafa; /* Было #f8f9fa */
+    -fx-font-family: "Inter", "Segoe UI", sans-serif;
+}
+
+/* Основные кнопки */
+.button {
+    -fx-background-color: #333333;
+    -fx-background-radius: 6px;
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: 500;
+    -fx-padding: 10 24;
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 4, 0, 0, 2);
+}
+
+.button:hover {
+    -fx-background-color: #6a6a6a; /* светлее фона кнопки */
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 6, 0, 0, 3);
+}
+
+/* Нажатие */
+.button:pressed {
+    -fx-background-color: #495057;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 2, 0, 0, 1);
+}
+
+.label, .text {
+    -fx-font-size: 15px;
+    -fx-text-fill: #212529;
+    -fx-font-family: "Inter", "Segoe UI", sans-serif;
+}
+
+.text.title {
+    -fx-font-size: 24px;
+    -fx-font-weight: 600;
+    -fx-fill: #212529;
+}
+
+.text.subtitle {
+    -fx-font-size: 16px;
+    -fx-fill: #6c757d;
+    -fx-font-weight: 400;
+}
+
+.text-field {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 6px;
+    -fx-border-color: #dee2e6;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1px;
+    -fx-font-size: 14px;
+    -fx-padding: 10 12;
+    -fx-text-fill: #212529;
+    -fx-effect: none;
+}
+
+.text-field:focused {
+    -fx-border-color: #adb5bd;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 4, 0, 0, 1);
+}
+
+.vbox, .hbox {
+    -fx-background-color: #ffffff;
+    -fx-border-radius: 12px;
+    -fx-background-radius: 12px;
+    -fx-padding: 32px;
+    -fx-spacing: 20px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 8, 0, 0, 2);
+}
+
+.vbox > .label:first-child,
+.vbox > .text:first-child {
+    -fx-font-size: 18px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #212529;
+}
+
+.scroll-pane {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+}
+
+.scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-padding: 2px;
+}
+
+.scroll-pane .thumb {
+    -fx-background-color: #ced4da;
+    -fx-background-radius: 4px;
+}
+
+.error-label {
+    -fx-text-fill: #dc3545;
+    -fx-font-size: 13px;
+    -fx-max-width: 600px;
+}
+
+.table-list-item {
+    -fx-background-color: #ffffff;
+    -fx-background-radius: 6px;
+    -fx-border-color: #adb5bd;
+    -fx-border-radius: 6px;
+    -fx-padding: 10 18;
+    -fx-font-size: 16px;
+    -fx-font-weight: 500;
+    -fx-text-fill: #333333;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 2, 0, 0, 1);
+    -fx-margin: 8px 0 8px 0;
+    -fx-cursor: pointer;
+}
+
+.table-list-item:hover {
+    -fx-background-color: #e9ecef;
+    -fx-border-color: #495057;
+    -fx-text-fill: #212529;
+}
+
+.text-field, .table-field {
+    -fx-background-radius: 6px;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1px;
+    -fx-font-size: 14px;
+    -fx-padding: 10 12;
+    -fx-text-fill: #212529;
+    -fx-effect: none;
+    -fx-max-width: 400px;
+}
+
+.label {
+    -fx-wrap-text: true;
+    -fx-max-width: 400px;
+}
